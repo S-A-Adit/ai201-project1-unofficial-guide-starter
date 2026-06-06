@@ -1,6 +1,6 @@
 # API keys — never commit these
 .env
-
+/.claude
 # Python
 __pycache__/
 *.py[cod]
@@ -15,6 +15,10 @@ env/
 # ChromaDB local storage
 chroma_db/
 chroma/
+
+# Raw scraped HTML (bulky, regenerable via `python ingest.py`).
+# Cleaned text in documents/clean/ and documents/chunks.jsonl ARE committed.
+documents/raw/
 
 # macOS
 .DS_Store

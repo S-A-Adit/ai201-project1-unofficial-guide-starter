@@ -22,23 +22,27 @@ This knowledge is valuable because official financial-aid pages document *proced
 <!-- List your specific sources: URLs, subreddit names, forum threads, or file descriptions.
      Aim for at least 10 sources that together cover different subtopics or perspectives within your domain. -->
 
-> Sources are weighted toward **unofficial/experiential** content (forums, community Q&A, Reddit) — the heart of the guide — with a few official OSU pages and authoritative guides used as a *baseline to contrast against* and to verify facts the forums state inconsistently. Rows 1 and 11 are community landing pages: collect specific threads in your browser (Reddit blocks automated fetching).
+> Sources are weighted toward **unofficial/experiential** content (forums, community Q&A, Reddit) — the heart of the guide — with a few official OSU pages and authoritative guides used as a *baseline to contrast against* and to verify facts the forums state inconsistently. The corpus is registered in [sources.py](sources.py) and collected by the pipeline (`ingest.py` → `clean.py` → `chunk.py`). **12 sources auto-scrape** into `documents/clean/`; **5 are JS-rendered or bot/login-blocked** (College Confidential, studentaid.gov, Reddit) so they're collected by hand into `documents/manual/<id>.txt`. A source tag (e.g. `[OSU SFA - official]`, `[r/OSU]`) is prepended to every chunk for attribution and to keep school-specific vs. general content distinguishable.
 
-| # | Source | Description | URL or location |
-|---|--------|-------------|-----------------|
-| 1 | r/OSU (Ohio State subreddit) | School-specific lived experience — search "financial aid", "billing", "appeal", "disbursement"; save specific threads | https://www.reddit.com/r/OSU/ |
-| 2 | OSU Student Financial Aid — Appeals | Official appeal criteria (income change, dependency override, cost-of-attendance) — the baseline the guide contrasts against | https://sfa.osu.edu/current-student/accept-aid/appeals |
-| 3 | OSU Student Financial Aid — How aid is applied | Official disbursement timing: aid stays "pending" until ~7–10 days before the term | https://sfa.osu.edu/current-student/manage-aid/how-aid-applied |
-| 4 | The Lantern — "Leftover funds: Unused scholarships amount to $615,000" | Student journalism: OSU scholarships going unawarded; one application covers many awards | https://www.thelantern.com/2020/02/leftover-funds-unused-scholarships-amount-to-615000/ |
-| 5 | The Lantern — financial aid tag | Collection of OSU tuition/aid/grant coverage over time | https://www.thelantern.com/tag/financial-aid/ |
-| 6 | Claimyr Q&A — Professional Judgment Appeal experiences / success rates | Community thread, 30+ replies: appeal success factors, documentation, ~65–80% job-loss approval | https://claimyr.com/financial-services/fafsa/FAFSA-Professional-Judgment-Appeal-experiences-Success-rates-for-special-circumstances/2025-03-28 |
-| 7 | Claimyr Q&A — Disbursement timing vs. tuition due date | Getting billed despite approved aid, and what students do about it | https://claimyr.com/financial-services/fafsa/FAFSA-disbursement-timing-vs-tuition-due-date-getting-bill-despite-approval/2025-03-28 |
-| 8 | Claimyr Q&A — Aid disbursement delays | When aid actually hits student accounts vs. expectations | https://claimyr.com/financial-services/fafsa/FAFSA-aid-disbursement-delays-when-should-financial-aid-actually-hit-student-accounts/2025-03-28 |
-| 9 | College Confidential — "Special Circumstances: Writing a Financial Aid Appeal Letter" | Forum thread: appeal-letter examples and what qualifies as special circumstances | https://talk.collegeconfidential.com/financial-aid-scholarships/1989916-special-circumstances-writing-a-financial-aid-appeal-letter.html |
-| 10 | College Confidential — "My ☆Special Circumstances☆ Appeal Letter" | Forum thread: a real appeal letter (job loss/unemployment) plus replies | https://talk.collegeconfidential.com/financial-aid-scholarships/783711-my-special-circumstances-appeal-letter.html |
-| 11 | r/financialaid · r/scholarships · r/StudentLoans | General communities for appeals, scholarship-hunting, and work-study vs. job tradeoffs; save specific threads | https://www.reddit.com/r/financialaid/ |
-| 12 | Federal Student Aid — Work-Study | Authoritative: work-study earnings excluded from next year's SAI — verifies the Q5 forum claims | https://studentaid.gov/understand-aid/types/work-study |
-| 13 | Sallie — "Hidden Gem Scholarships" | Lesser-known scholarships with low applicant pools (Q4) | https://www.sallie.com/resources/scholarships/hidden-gems |
+| # | Source | Description (maps to eval Q) | Status | URL or location |
+|---|--------|------------------------------|--------|-----------------|
+| 1 | OSU Student Financial Aid — Appeals | Official appeal criteria — baseline to contrast (Q1) | scraped | https://sfa.osu.edu/current-student/accept-aid/appeals |
+| 2 | OSU SFA — How aid is applied | Disbursement timing; aid "pending" until ~7–10 days pre-term (Q2, Q3) | scraped | https://sfa.osu.edu/current-student/manage-aid/how-aid-applied |
+| 3 | The Lantern — "Leftover funds: $615K unawarded" | OSU scholarships going unawarded; one app covers many (Q4) | scraped | https://www.thelantern.com/2020/02/leftover-funds-unused-scholarships-amount-to-615000/ |
+| 4 | The Lantern — "DeWine's budget revamps grants" | State grant expansion for need-based students (Q4) | scraped | https://www.thelantern.com/2023/02/dewines-budget-revamps-government-grant-opportunities-expected-to-help-students-most-in-need/ |
+| 5 | The Lantern — "How to pay for graduate school" | Fellowships, grants, scholarships at OSU (Q4) | scraped | https://www.thelantern.com/2019/02/how-to-pay-for-graduate-school/ |
+| 6 | Claimyr Q&A — Professional Judgment Appeal | 30+ replies: success factors, documentation, ~65–80% job-loss approval (Q1) | scraped | https://claimyr.com/financial-services/fafsa/FAFSA-Professional-Judgment-Appeal-experiences-Success-rates-for-special-circumstances/2025-03-28 |
+| 7 | Claimyr Q&A — Disbursement timing vs. due date | Billed despite approved aid, and what to do (Q3) | scraped | https://claimyr.com/financial-services/fafsa/FAFSA-disbursement-timing-vs-tuition-due-date-getting-bill-despite-approval/2025-03-28 |
+| 8 | Claimyr Q&A — Aid disbursement delays | When aid actually hits accounts; ~10-day rule (Q2, Q3) | scraped | https://claimyr.com/financial-services/fafsa/FAFSA-aid-disbursement-delays-when-should-financial-aid-actually-hit-student-accounts/2025-03-28 |
+| 9 | FinAid.org — Financial Aid Appeal | Valid appeal reasons and how the process works (Q1) | scraped | https://finaid.org/financial-aid-applications/financial-aid-appeal/ |
+| 10 | Fastweb — When award letters arrive | FAFSA-to-package timeline ranges (Q2) | scraped | https://www.fastweb.com/financial-aid/articles/when-will-the-financial-aid-award-letter-arrive |
+| 11 | College Essay Guy — Federal Work-Study | Work-study mechanics; earnings & next-year aid (Q5) | scraped | https://www.collegeessayguy.com/blog/federal-work-study-program |
+| 12 | Sallie — "Hidden Gem Scholarships" | Lesser-known scholarships with low applicant pools (Q4) | scraped | https://www.sallie.com/resources/scholarships/hidden-gems |
+| 13 | College Confidential — "Writing a Financial Aid Appeal Letter" | Appeal-letter examples; what qualifies (Q1) | manual (JS-rendered) | https://talk.collegeconfidential.com/financial-aid-scholarships/1989916-special-circumstances-writing-a-financial-aid-appeal-letter.html |
+| 14 | College Confidential — "My ☆Special Circumstances☆ Appeal Letter" | A real appeal letter (job loss) plus replies (Q1) | manual (JS-rendered) | https://talk.collegeconfidential.com/financial-aid-scholarships/783711-my-special-circumstances-appeal-letter.html |
+| 15 | Federal Student Aid — Work-Study | Authoritative: work-study excluded from next year's SAI (Q5) | manual (JS-rendered) | https://studentaid.gov/understand-aid/types/work-study |
+| 16 | r/OSU (Ohio State subreddit) | School-specific billing/aid/appeal threads | manual (Reddit) | https://www.reddit.com/r/OSU/ |
+| 17 | r/financialaid · r/scholarships · r/StudentLoans | General appeals, scholarship-hunting, work-study tradeoffs | manual (Reddit) | https://www.reddit.com/r/financialaid/ |
 
 ---
 
@@ -62,6 +66,10 @@ _Source-structure observations from skimming that drove these numbers:_
 - **News / long-form (The Lantern, ~1,200 words):** facts (dollar amounts, official quotes, scholarship names) are **distributed strategically across paragraphs**. Implication: larger chunks tolerate this better; overlap matters less than for forums.
 - **Official pages (OSU SFA, studentaid.gov):** dense, structured, fact-per-sentence. Implication: medium chunks; little overlap needed.
 - Mixed corpus → a single chunk size is a compromise; note this tension in the Failure Case Analysis.
+
+**Implementation note (Milestone 3):** the char window snaps both its end *and* its start to the nearest sentence/space boundary so chunks never begin or end mid-word. `ingest.py` also decodes raw bytes with an encoding-fallback chain (utf-8 → cp1252) to avoid smart-quote mojibake.
+
+**Final chunk count:** **372 chunks** across the 12 auto-scraped documents (sizes 294–632 chars; comfortably inside the healthy 50–2,000 band, and every chunk under the 256-token model cap). The 5 manually-collected sources will add more once saved to `documents/manual/`.
 
 ---
 

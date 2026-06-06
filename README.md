@@ -62,6 +62,25 @@ The corpus is registered in [sources.py](sources.py) and built by `ingest.py →
 
 **Final chunk count:** **372 chunks** across the 12 collected documents (sizes 294–632 chars; all under the 256-token cap, comfortably inside the healthy 50–2,000 band).
 
+### Sample Chunks
+
+Five chunks pulled straight from `documents/chunks.jsonl` (printed by `python chunk.py`), each labeled with its source document and `chunk_index`. The leading `[tag]` is prepended to every chunk for attribution:
+
+1. **`osu_sfa_appeals` #0** — *[OSU SFA - official]*
+   > [OSU SFA - official] While attending Ohio State University, there are several types of appeals you may utilize to address special or unusual circumstances, educationally related costs that may exceed the standard cost of attendance, and loss of university-administered scholarships. Change of Circumstances Special Circumstances - If you or your family's financial situation has changed from what is reflected…
+
+2. **`finaid_appeal` #0** — *[FinAid.org - general guide]*
+   > [FinAid.org - general guide] As thorough as the FAFSA is in its line of questioning, there are certain financial circumstances that it is unable to capture. Students and their families also face unforeseen events the year that they apply for the FAFSA, making it ineligible to include for that application cycle. In these instances, the financial aid package that is distributed to students is not enough to meet their…
+
+3. **`claimyr_disbursement_timing` #0** — *[Claimyr Q&A - general]*
+   > [Claimyr Q&A - general] FAFSA disbursement timing vs. tuition due date - getting bill despite approval? I'm totally confused about FAFSA disbursement timing. I submitted my FAFSA back in January, got approved with a decent SAI, and my college financial aid office confirmed everything was good to go for fall semester. But today I just got this scary email saying I owe $3200 for my classes??…
+
+4. **`collegeessayguy_work_study` #0** — *[College Essay Guy - general guide]*
+   > [College Essay Guy - general guide] A Guide to the Federal Work-Study Program. Want to minimize student loan debt while attending college or graduate school? A work-study job can help. The federal work-study program ensures part-time jobs are available to undergraduate and graduate students with financial need. How do you apply for the program?…
+
+5. **`lantern_leftover_funds` #0** — *[The Lantern - OSU student news]*
+   > [The Lantern - OSU student news] Ten colleges within Ohio State did not award more than $615,000 worth of scholarships. Fifty in-state students could have attended Ohio State tuition-free this past year with the amount of scholarship money colleges left unspent. Ten colleges within Ohio State did not award $615,000 worth of undergraduate scholarships in fiscal year 2019…
+
 ---
 
 ## Embedding Model
@@ -75,6 +94,45 @@ The corpus is registered in [sources.py](sources.py) and built by `ingest.py →
 **Model used:** `all-MiniLM-L6-v2` via `sentence-transformers`, with vectors stored in **ChromaDB** configured for **cosine distance** (`hnsw:space: cosine`). It runs locally with no API key or rate limits, produces 384-dim embeddings, is fast on CPU (372 chunks embedded in ~20s), and performs well on the short English passages that dominate this corpus.
 
 **Production tradeoff reflection:** If cost weren't a constraint I'd evaluate a hosted model such as OpenAI `text-embedding-3-large` or Voyage `voyage-3`. The tradeoffs I'd weigh: (1) **context length** — MiniLM's 256-token cap forces small chunks; a larger input window could embed whole forum threads and reduce boundary-splitting; (2) **accuracy on domain-specific text** — financial-aid jargon (SAI, COA, professional judgment, Title IV) may embed more distinctly in a larger model, which could have helped the Q2 retrieval miss below; (3) **latency & dependency** — API models add network latency and a key/quota dependency that a local model avoids; (4) **multilingual** — not needed here (English-only sources), so I wouldn't pay for it. For this project the local model is the right call; at production scale I'd A/B it against `text-embedding-3-large` on the 5 eval questions before switching.
+
+---
+
+## Retrieval Test Examples
+
+Captured from `python retrieve.py` (top-k = 4, cosine distance — lower is closer). For each query, the top returned chunks are shown with their `source_id #chunk_index` and distance.
+
+### Example 1 — "What makes a financial aid appeal more likely to be approved?"
+
+| Rank | Chunk | Distance | Snippet |
+|---|---|---|---|
+| 1 | `finaid_appeal` #2 | 0.288 | "…reserved for special circumstances. Reasons to Appeal Your Financial Aid Package: Job loss or decrease in income, Divorce or separation…" |
+| 2 | `claimyr_pj_appeal` #1 | 0.316 | "…something about a 'Professional Judgment Appeal'… Has anyone successfully appealed their financial aid decision? What kind of documentation did you need?…" |
+| 3 | `finaid_appeal` #1 | 0.319 | "…they can ask their college about appealing financial aid. A financial aid appeal, also referred to as a professional judgment, is the process by which a student and their family…" |
+| 4 | `claimyr_pj_appeal` #13 | 0.337 | "…Make sure you understand exactly what qualifies a…" |
+
+**Why these chunks are relevant:** The query asks what improves an appeal's odds, and the #1 hit (`finaid_appeal` #2) is the single most on-point passage in the corpus — it literally enumerates the qualifying reasons ("Job loss or decrease in income, Divorce or separation…"). The #3 hit defines what a professional-judgment appeal *is*, providing the framing, and the two `claimyr_pj_appeal` chunks add real applicant experiences about documentation. Retrieval surfaced both the authoritative "what qualifies" list and the lived "how it went" context, which is exactly the spread the question needs.
+
+### Example 2 — "What should I do if my tuition bill is due before financial aid disburses?"
+
+| Rank | Chunk | Distance | Snippet |
+|---|---|---|---|
+| 1 | `claimyr_disbursement_timing` #27 | 0.299 | "…check if your school offers a 'financial aid deferment' on your student account - it's different from…" |
+| 2 | `claimyr_disbursement_timing` #3 | 0.307 | "…the billing system sees you owe money, while the financial aid system knows you have pending aid…" |
+| 3 | `claimyr_disbursement_timing` #55 | 0.329 | "…try calling the student accounts/billing office directly. They can often see your pending aid status and confirm your registration is protected while you wait for disbursement…" |
+| 4 | `claimyr_disbursement_timing` #8 | 0.330 | "…As long as the aid is showing as pending in your account, you're fine. Most schools won't d[rop you]…" |
+
+**Why these chunks are relevant:** Every returned chunk comes from the disbursement-timing thread, which is precisely the scenario in the query (bill due before money arrives). The #1 hit names the concrete action — request a "financial aid deferment" — while #3 and #4 reassure that pending aid protects registration and tell the student exactly who to call. Together they give an actionable answer (deferment + contact billing) plus the reassurance the worried student is looking for.
+
+### Example 3 — "How does work-study differ from a regular part-time job for financial aid?"
+
+| Rank | Chunk | Distance | Snippet |
+|---|---|---|---|
+| 1 | `collegeessayguy_work_study` #1 | 0.308 | "…Are work-study jobs better than traditional part-time jobs?…" |
+| 2 | `collegeessayguy_work_study` #3 | 0.352 | "…The federal work-study program is a government-funded program that helps undergraduate and graduate students secure part-time jobs to pay for educat[ion]…" |
+| 3 | `collegeessayguy_work_study` #20 | 0.356 | "…the money you get from a work-study job isn't calculated into your FAFSA. That means the money you earn from work-study won't reduce your eligibility for financial aid…" |
+| 4 | `collegeessayguy_work_study` #17 | 0.380 | "…Some part-time jobs pay more than work-study jobs. So, why would you consider applying for this type of job?…" |
+
+The retrieved chunks correctly isolate the work-study vs. part-time comparison, including the key distinguishing fact in #3 (work-study income is excluded from the FAFSA).
 
 ---
 
@@ -92,6 +150,82 @@ The corpus is registered in [sources.py](sources.py) and built by `ingest.py →
 Grounding is also enforced **structurally**, not just by instruction: `retrieve()` returns the top-4 chunks, and `ask()` filters them to a cosine distance ≤ 0.70. If **no** chunk clears that bar (e.g. an off-domain question like "best pizza near campus"), the system returns the refusal string **without ever calling the LLM** — so it is structurally impossible to answer from training knowledge. Retrieved chunks are passed as a numbered list (`[1] (source: …)`) so the model can cite by number.
 
 **How source attribution is surfaced in the response:** Attribution is built **programmatically** from the retrieved chunks' metadata — `ask()` collects each chunk's `source_id` and looks up its tag and URL from `sources.py`, dedupes them, and returns them as a `sources` list. This is guaranteed by code, not parsed from or trusted to the LLM. The model *additionally* cites the context numbers (`[1]`, `[2]`) inline for traceability, but even if it omitted them the source list would still be correct. When the answer is the refusal string, the sources list is suppressed so the UI never implies a document backed a non-answer. The Gradio UI ([app.py](app.py)) shows the answer and a separate "Retrieved from" panel listing those sources.
+
+### Grounded Generation Examples
+
+Verbatim output from `python generate.py`. Note the inline `[n]` citations in the answer text and the programmatic "Retrieved from" source list — both are visible attribution tying every claim back to a collected document.
+
+**Example A — "What makes a financial aid appeal more likely to be approved?"**
+
+```
+A financial aid appeal is more likely to be approved if there are special circumstances
+such as job loss, divorce, death of a parent, or unreimbursed medical expenses [1]. Valid
+reasons for appeal include loss of employment, significant reduction in income, divorce or
+separation of parents, death of parent or spouse, and extraordinary medical expenses [4].
+
+Retrieved from:
+  • [FinAid.org - general guide] finaid_appeal — https://finaid.org/financial-aid-applications/financial-aid-appeal/
+  • [Claimyr Q&A - general] claimyr_pj_appeal — https://claimyr.com/financial-services/fafsa/FAFSA-Professional-Judgment-Appeal-experiences-Success-rates-for-special-circumstances/2025-03-28
+```
+
+**Example B — "What should I do if my tuition bill is due before financial aid disburses?"**
+
+```
+If your tuition bill is due before financial aid disburses, you should check if your school
+offers a "financial aid deferment" on your student account, which defers the payment
+deadline until your financial aid processes [1]. You can also try contacting the student
+accounts/billing office directly to confirm your registration is protected while you wait
+for disbursement [3]. Additionally, make sure you've accepted your financial aid package,
+completed entrance counseling, and signed your Master Promissory Note if you're receiving
+loans [2].
+
+Retrieved from:
+  • [Claimyr Q&A - general] claimyr_disbursement_timing — https://claimyr.com/financial-services/fafsa/FAFSA-disbursement-timing-vs-tuition-due-date-getting-bill-despite-approval/2025-03-28
+```
+
+**Out-of-scope example — "What's the best pizza place near campus?"**
+
+```
+I don't have enough information on that.
+```
+
+No source list is shown. This off-domain query never reaches the LLM: no retrieved chunk clears the cosine ≤ 0.70 relevance gate, so `ask()` returns the refusal string structurally. This is the grounding guarantee in action — the system cannot answer from training knowledge when the corpus has nothing relevant.
+
+---
+
+## Query Interface
+
+The interface is a **Gradio** web app ([app.py](app.py)), launched with `python app.py` and served at `http://localhost:7860`.
+
+**Input field**
+- **"Your question"** — a single-line textbox (placeholder: *"e.g. How do I get a financial aid appeal approved?"*). Submitting with **Enter** or clicking the **"Ask"** button triggers the query. Empty input returns a "Please enter a question." prompt.
+
+**Output fields**
+- **"Answer"** (8-line textbox) — the grounded answer with inline `[n]` citations, or the refusal string.
+- **"Retrieved from"** (4-line textbox) — the deduped source list (tag + `source_id` + URL), or *"(no sufficiently relevant sources)"* when the query is refused.
+
+**Sample interaction transcript**
+
+```
+┌─ Unofficial Guide — Ohio State Financial Aid ─────────────────────────────┐
+│ Ask about appeals, FAFSA/disbursement timing, scholarships, or work-study.│
+│                                                                           │
+│ Your question:                                                            │
+│ [ How does work-study differ from a regular part-time job for aid?     ]  │
+│                                  [ Ask ]                                  │
+│                                                                           │
+│ Answer:                                                                   │
+│ Work-study jobs differ from regular part-time jobs in that the money      │
+│ earned from a work-study job isn't calculated into the FAFSA, which means │
+│ it won't reduce eligibility for financial aid [3]. This is a key benefit  │
+│ of work-study jobs, allowing students to earn income without risking      │
+│ their financial assistance.                                               │
+│                                                                           │
+│ Retrieved from:                                                           │
+│ • [College Essay Guy - general guide] collegeessayguy_work_study —        │
+│   https://www.collegeessayguy.com/blog/federal-work-study-program         │
+└───────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 

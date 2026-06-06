@@ -14,6 +14,8 @@
      Example: "Student reviews of CS professors at [university] — useful because official
      course descriptions don't reflect teaching style, exam difficulty, or workload." -->
 
+This guide covers **financial aid navigation at Ohio State University** — the lived realities of FAFSA timing, aid appeals, lesser-known scholarships, work-study vs. part-time work, and bridging the gap when tuition is due before aid disburses. Official aid pages publish procedures and deadlines but not *outcomes*: which appeals actually get approved, realistic processing timelines, and the workarounds students rely on. That practical knowledge is scattered across Reddit, College Confidential, and student Q&A forums, is often contradictory, and rarely surfaces through official channels.
+
 ---
 
 ## Document Sources
